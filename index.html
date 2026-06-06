@@ -20,8 +20,10 @@ button { padding: 8px 16px; border: 1px solid #ddd; border-radius: 8px; font-siz
 button:hover { background: #f5f5f5; }
 button.primary { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
 button.primary:hover { opacity: 0.85; }
-.store-item { display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
+button.danger { color: #e53e3e; border-color: #e53e3e; }
+.store-item { display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid #f0f0f0; cursor: pointer; }
 .store-item:last-child { border-bottom: none; }
+.store-item:hover { background: #fafafa; }
 .store-name { font-size: 14px; font-weight: 500; }
 .store-meta { font-size: 12px; color: #888; margin-top: 2px; }
 .badge-match { display:inline-block; font-size: 11px; padding: 2px 8px; border-radius: 8px; background: #E1F5EE; color: #0F6E56; }
@@ -42,13 +44,17 @@ button.primary:hover { opacity: 0.85; }
 .import-item:last-child { border-bottom: none; }
 .file-drop { border: 2px dashed #ddd; border-radius: 12px; padding: 2rem; text-align: center; cursor: pointer; color: #999; font-size: 14px; margin-bottom: 12px; }
 .file-drop:hover { border-color: #bbb; background: #fafafa; }
-#import-preview { max-height: 400px; overflow-y: auto; }
+/* モーダル */
+.modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); z-index:100; align-items:center; justify-content:center; }
+.modal-overlay.open { display:flex; }
+.modal { background:#fff; border-radius:16px; padding:1.5rem; width:90%; max-width:400px; }
+.modal h3 { font-size:15px; font-weight:500; margin-bottom:1rem; }
+.modal-footer { display:flex; gap:8px; margin-top:1rem; }
 </style>
 </head>
 <body>
 <div class="app">
   <h1>📍 行きたい店レーダー</h1>
-
   <div class="tabs">
     <button class="tab active" onclick="showTab('search')">🔍 予定から探す</button>
     <button class="tab" onclick="showTab('add')">＋ 登録</button>
@@ -128,39 +134,69 @@ button.primary:hover { opacity: 0.85; }
       <div class="section-title">ジャンル別 通知範囲</div>
       <div class="setting-row">
         <div><div class="setting-label">カフェ・パン</div><div class="setting-sub">ランチ・ごはんも同じ</div></div>
-        <div class="time-input"><input type="number" id="t-cafe" value="10" min="1" max="60" /><span style="font-size:13px; color:#888;">分以内</span></div>
+        <div class="time-input"><input type="number" id="t-cafe" value="10" min="1" max="60" /><span style="font-size:13px;color:#888;">分以内</span></div>
       </div>
       <div class="setting-row">
         <div><div class="setting-label">雑貨・服・本</div></div>
-        <div class="time-input"><input type="number" id="t-goods" value="7" min="1" max="60" /><span style="font-size:13px; color:#888;">分以内</span></div>
+        <div class="time-input"><input type="number" id="t-goods" value="7" min="1" max="60" /><span style="font-size:13px;color:#888;">分以内</span></div>
       </div>
       <div class="setting-row">
         <div><div class="setting-label">特別な店</div></div>
-        <div class="time-input"><input type="number" id="t-special" value="15" min="1" max="60" /><span style="font-size:13px; color:#888;">分以内</span></div>
+        <div class="time-input"><input type="number" id="t-special" value="15" min="1" max="60" /><span style="font-size:13px;color:#888;">分以内</span></div>
       </div>
     </div>
     <div class="card">
       <div class="section-title">お気に入り度別 通知範囲</div>
-      <div style="font-size:12px; color:#999; margin-bottom:10px;">ジャンルより広い場合はこちらを優先</div>
+      <div style="font-size:12px;color:#999;margin-bottom:10px;">ジャンルより広い場合はこちらを優先</div>
       <div class="setting-row">
         <div><div class="setting-label">★ 気になる</div></div>
-        <div class="time-input"><input type="number" id="f-1" value="5" min="1" max="60" /><span style="font-size:13px; color:#888;">分以内</span></div>
+        <div class="time-input"><input type="number" id="f-1" value="5" min="1" max="60" /><span style="font-size:13px;color:#888;">分以内</span></div>
       </div>
       <div class="setting-row">
         <div><div class="setting-label">★★ 行きたい</div></div>
-        <div class="time-input"><input type="number" id="f-2" value="15" min="1" max="60" /><span style="font-size:13px; color:#888;">分以内</span></div>
+        <div class="time-input"><input type="number" id="f-2" value="15" min="1" max="60" /><span style="font-size:13px;color:#888;">分以内</span></div>
       </div>
       <div class="setting-row">
         <div><div class="setting-label">★★★ 絶対行く</div></div>
-        <div class="time-input"><input type="number" id="f-3" value="30" min="1" max="120" /><span style="font-size:13px; color:#888;">分以内</span></div>
+        <div class="time-input"><input type="number" id="f-3" value="30" min="1" max="120" /><span style="font-size:13px;color:#888;">分以内</span></div>
       </div>
     </div>
     <button class="primary" style="width:100%;" onclick="saveSettings()">設定を保存する</button>
   </div>
 </div>
 
+<!-- 編集モーダル -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <h3>お店を編集</h3>
+    <input type="text" id="edit-name" placeholder="店名" />
+    <input type="text" id="edit-area" placeholder="エリア（例：上野、銀座）" />
+    <select id="edit-genre">
+      <option value="">ジャンルを選ぶ</option>
+      <option value="カフェ・パン">カフェ・パン</option>
+      <option value="ランチ・ごはん">ランチ・ごはん</option>
+      <option value="雑貨・服・本">雑貨・服・本</option>
+      <option value="特別な店">特別な店・記念日</option>
+      <option value="その他">その他</option>
+    </select>
+    <div style="font-size:13px;color:#888;margin-bottom:6px;">お気に入り度</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+      <button class="transport-btn" id="edit-fav1" onclick="setEditFav(1)">★ 気になる</button>
+      <button class="transport-btn" id="edit-fav2" onclick="setEditFav(2)">★★ 行きたい</button>
+      <button class="transport-btn" id="edit-fav3" onclick="setEditFav(3)">★★★ 絶対行く</button>
+    </div>
+    <div class="modal-footer">
+      <button class="danger" onclick="deleteFromModal()">削除</button>
+      <button onclick="closeModal()" style="flex:1;">キャンセル</button>
+      <button class="primary" onclick="saveEdit()" style="flex:1;">保存</button>
+    </div>
+  </div>
+</div>
+
 <script>
 let selectedFav = 3;
+let editFav = 2;
+let editId = null;
 let transport = 'train';
 let stores = JSON.parse(localStorage.getItem('shops') || '[]');
 let nextId = stores.length > 0 ? Math.max(...stores.map(s=>s.id)) + 1 : 1;
@@ -204,6 +240,11 @@ function setFav(n) {
   [1,2,3].forEach(i => document.getElementById('fav'+i).classList.toggle('selected', i===n));
 }
 
+function setEditFav(n) {
+  editFav = n;
+  [1,2,3].forEach(i => document.getElementById('edit-fav'+i).classList.toggle('selected', i===n));
+}
+
 function setTransport(t) {
   transport = t;
   ['walk','train','car'].forEach(k => document.getElementById('t-'+k).classList.toggle('selected', k===t));
@@ -213,22 +254,22 @@ function searchStores() {
   const dest = document.getElementById('dest-input').value.trim();
   const container = document.getElementById('search-results');
   if(!dest) { container.innerHTML = '<div class="empty">目的地を入力してください</div>'; return; }
-  const matched = stores.filter(s => s.area && (s.area.includes(dest) || dest.includes(s.area)));
+  const matched = stores.filter(s => s.area && s.area !== 'エリア未設定' && (s.area.includes(dest) || dest.includes(s.area)));
   if(matched.length === 0) {
-    container.innerHTML = `<div class="result-card"><div style="font-size:14px; font-weight:500;">${dest}付近の保存店はありません</div><div style="font-size:12px; color:#999; margin-top:4px;">「登録」か「取り込む」から追加しよう</div></div>`;
+    container.innerHTML = `<div class="result-card"><div style="font-size:14px;font-weight:500;">${dest}付近の保存店はありません</div><div style="font-size:12px;color:#999;margin-top:4px;">「リスト」からお店のエリアを設定してみよう</div></div>`;
     return;
   }
   const tLabel = {walk:"徒歩", train:"電車", car:"車"}[transport];
-  let html = `<div class="result-card"><div style="font-size:15px; font-weight:500; margin-bottom:12px;">📍 ${dest}付近に ${matched.length}件あります</div>`;
+  let html = `<div class="result-card"><div style="font-size:15px;font-weight:500;margin-bottom:12px;">📍 ${dest}付近に ${matched.length}件あります</div>`;
   matched.forEach(s => {
     const mins = effectiveTime(s);
     const favLabel = {1:"★",2:"★★",3:"★★★"}[s.fav]||"★★";
     const favName = {1:"気になる",2:"行きたい",3:"絶対行く"}[s.fav]||"行きたい";
-    html += `<div class="store-item">
+    html += `<div class="store-item" onclick="openModal(${s.id})">
       <div>
-        <div class="store-name">${s.name}<span class="badge-fav">${favLabel} ${favName}</span>${s.imported?'<span class="badge-import">Gマップ</span>':''}</div>
-        <div class="store-meta">${s.area||'エリア未設定'} · ${s.genre||'その他'}</div>
-        <div style="font-size:11px; color:#0F6E56; margin-top:2px;">${tLabel}${mins}分以内で通知</div>
+        <div class="store-name">${s.name}<span class="badge-fav">${favLabel} ${favName}</span></div>
+        <div class="store-meta">${s.area} · ${s.genre||'その他'}</div>
+        <div style="font-size:11px;color:#0F6E56;margin-top:2px;">${tLabel}${mins}分以内で通知</div>
       </div>
       <span class="badge-match">保存済み</span>
     </div>`;
@@ -253,10 +294,39 @@ function addStore() {
   alert(`「${name}」を登録しました！`);
 }
 
-function deleteStore(id) {
-  if(!confirm('削除しますか？')) return;
-  stores = stores.filter(s => s.id !== id);
+function openModal(id) {
+  const s = stores.find(s => s.id === id);
+  if(!s) return;
+  editId = id;
+  document.getElementById('edit-name').value = s.name;
+  document.getElementById('edit-area').value = s.area === 'エリア未設定' ? '' : s.area;
+  document.getElementById('edit-genre').value = s.genre || '';
+  setEditFav(s.fav || 2);
+  document.getElementById('edit-modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('edit-modal').classList.remove('open');
+  editId = null;
+}
+
+function saveEdit() {
+  const s = stores.find(s => s.id === editId);
+  if(!s) return;
+  s.name = document.getElementById('edit-name').value.trim() || s.name;
+  s.area = document.getElementById('edit-area').value.trim() || 'エリア未設定';
+  s.genre = document.getElementById('edit-genre').value || 'その他';
+  s.fav = editFav;
   saveStores();
+  closeModal();
+  renderList();
+}
+
+function deleteFromModal() {
+  if(!confirm('削除しますか？')) return;
+  stores = stores.filter(s => s.id !== editId);
+  saveStores();
+  closeModal();
   renderList();
 }
 
@@ -268,47 +338,42 @@ function renderList() {
     countEl.textContent = '';
     return;
   }
-  countEl.textContent = `${stores.length}件登録済み`;
+  const noArea = stores.filter(s => !s.area || s.area === 'エリア未設定').length;
+  countEl.textContent = `${stores.length}件登録済み${noArea > 0 ? ` · エリア未設定 ${noArea}件（タップして編集）` : ''}`;
   const favLabel = {1:"★",2:"★★",3:"★★★"};
   let html = '';
   stores.forEach(s => {
-    html += `<div class="store-item">
+    const noAreaStyle = (!s.area || s.area === 'エリア未設定') ? 'color:#e53e3e;' : '';
+    html += `<div class="store-item" onclick="openModal(${s.id})">
       <div style="flex:1;">
         <div class="store-name">${s.name}<span class="badge-fav">${favLabel[s.fav]||'★★'}</span>${s.imported?'<span class="badge-import">Gマップ</span>':''}</div>
-        <div class="store-meta">${s.area||'エリア未設定'} · ${s.genre||'その他'}</div>
+        <div class="store-meta" style="${noAreaStyle}">${s.area||'エリア未設定（タップして設定）'} · ${s.genre||'その他'}</div>
       </div>
-      <button style="font-size:12px; padding:4px 8px; border:none; color:#999;" onclick="deleteStore(${s.id})">🗑</button>
+      <span style="font-size:12px;color:#bbb;">›</span>
     </div>`;
   });
   container.innerHTML = html;
 }
 
-// ファイル読み込み（CSV/JSON両対応）
 function loadFile(event) {
   const file = event.target.files[0];
   if(!file) return;
   const reader = new FileReader();
   reader.onload = (e) => {
-    const content = e.target.result;
-    if(file.name.endsWith('.json')) {
-      parseJSON(content);
-    } else {
-      parseCSV(content);
-    }
+    if(file.name.endsWith('.json')) parseJSON(e.target.result);
+    else parseCSV(e.target.result);
   };
   reader.readAsText(file, 'UTF-8');
 }
 
 function parseCSV(text) {
   const lines = text.split('\n').filter(l => l.trim());
-  // 1行目はヘッダー、2行目は空行の場合あり
   const items = [];
   for(let i = 1; i < lines.length; i++) {
     const cols = lines[i].split(',');
     const name = cols[0] ? cols[0].replace(/^"|"$/g, '').trim() : '';
-    const url = cols[2] ? cols[2].replace(/^"|"$/g, '').trim() : '';
     if(!name) continue;
-    items.push({ name, url, area: '', checked: true });
+    items.push({ name, area: '', checked: true });
   }
   importBuffer = items;
   renderImportPreview();
@@ -317,17 +382,13 @@ function parseCSV(text) {
 function parseJSON(text) {
   try {
     const data = JSON.parse(text);
-    const features = data.features || [];
-    importBuffer = features.map(f => ({
+    importBuffer = (data.features||[]).map(f => ({
       name: f.properties.name || '名称なし',
-      url: '',
       area: extractArea(f.properties.address || ''),
       checked: true,
     }));
     renderImportPreview();
-  } catch(e) {
-    alert('読み込みに失敗しました');
-  }
+  } catch(e) { alert('読み込みに失敗しました'); }
 }
 
 function extractArea(address) {
@@ -342,20 +403,17 @@ function renderImportPreview() {
   const container = document.getElementById('import-preview');
   if(importBuffer.length === 0) { container.innerHTML = ''; return; }
   let html = `<div class="card">
-    <div style="font-size:13px; font-weight:500; margin-bottom:4px;">${importBuffer.length}件見つかりました</div>
-    <div style="font-size:12px; color:#888; margin-bottom:12px;">取り込みたいものにチェックを入れてください。エリアは後で編集できます。</div>
-    <div style="display:flex; gap:8px; margin-bottom:12px;">
+    <div style="font-size:13px;font-weight:500;margin-bottom:4px;">${importBuffer.length}件見つかりました</div>
+    <div style="font-size:12px;color:#888;margin-bottom:12px;">取り込んだ後、リストからエリアを設定できます</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
       <button onclick="selectAllImport(true)" style="font-size:12px;">全選択</button>
       <button onclick="selectAllImport(false)" style="font-size:12px;">全解除</button>
-      <button class="primary" style="flex:1;" onclick="doImport()">選択した店を取り込む</button>
+      <button class="primary" style="flex:1;" onclick="doImport()">取り込む</button>
     </div>`;
   importBuffer.forEach((item, i) => {
     html += `<div class="import-item">
       <input type="checkbox" id="chk_${i}" ${item.checked?'checked':''} onchange="importBuffer[${i}].checked=this.checked" />
-      <div style="flex:1;">
-        <div style="font-size:13px; font-weight:500;">${item.name}</div>
-        ${item.area ? `<div style="font-size:11px; color:#888;">${item.area}</div>` : ''}
-      </div>
+      <div style="font-size:13px;font-weight:500;">${item.name}</div>
     </div>`;
   });
   html += '</div>';
@@ -373,20 +431,12 @@ function doImport() {
   const selected = importBuffer.filter(i => i.checked);
   if(selected.length === 0) { alert('選択してください'); return; }
   selected.forEach(item => {
-    stores.push({
-      id: nextId++,
-      name: item.name,
-      area: item.area || 'エリア未設定',
-      genre: 'その他',
-      fav: 2,
-      memo: '',
-      imported: true,
-    });
+    stores.push({ id: nextId++, name: item.name, area: item.area || 'エリア未設定', genre: 'その他', fav: 2, memo: '', imported: true });
   });
   saveStores();
   document.getElementById('import-preview').innerHTML = '';
   document.getElementById('file-input').value = '';
-  alert(`${selected.length}件取り込みました！`);
+  alert(`${selected.length}件取り込みました！\nリストからエリアを設定してください。`);
   showTab('list');
 }
 
@@ -411,6 +461,10 @@ if(saved.tSpecial) document.getElementById('t-special').value = saved.tSpecial;
 if(saved.f1) document.getElementById('f-1').value = saved.f1;
 if(saved.f2) document.getElementById('f-2').value = saved.f2;
 if(saved.f3) document.getElementById('f-3').value = saved.f3;
+
+document.getElementById('edit-modal').addEventListener('click', function(e) {
+  if(e.target === this) closeModal();
+});
 </script>
 </body>
 </html>
