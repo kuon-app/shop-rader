@@ -20,7 +20,6 @@ button { padding: 8px 16px; border: 1px solid #ddd; border-radius: 8px; font-siz
 button:hover { background: #f5f5f5; }
 button.primary { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
 button.primary:hover { opacity: 0.85; }
-button.danger { background: #fff; color: #e53e3e; border-color: #e53e3e; }
 .store-item { display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
 .store-item:last-child { border-bottom: none; }
 .store-name { font-size: 14px; font-weight: 500; }
@@ -39,11 +38,11 @@ button.danger { background: #fff; color: #e53e3e; border-color: #e53e3e; }
 .transport-btn.selected { background: #f0f0f0; color: #1a1a1a; border-color: #bbb; font-weight: 500; }
 .section-title { font-size: 11px; font-weight: 500; color: #999; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
 .result-card { background: #f8f8f8; border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 8px; }
-.import-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f0f0f0; gap: 8px; }
+.import-item { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid #f0f0f0; gap: 8px; }
 .import-item:last-child { border-bottom: none; }
-.import-check { width: 18px; height: 18px; cursor: pointer; }
 .file-drop { border: 2px dashed #ddd; border-radius: 12px; padding: 2rem; text-align: center; cursor: pointer; color: #999; font-size: 14px; margin-bottom: 12px; }
 .file-drop:hover { border-color: #bbb; background: #fafafa; }
+#import-preview { max-height: 400px; overflow-y: auto; }
 </style>
 </head>
 <body>
@@ -96,6 +95,7 @@ button.danger { background: #fff; color: #e53e3e; border-color: #e53e3e; }
 
   <!-- リスト -->
   <div id="sec-list" class="section">
+    <div style="font-size:13px; color:#888; margin-bottom:8px;" id="list-count"></div>
     <div class="card">
       <div id="store-list-container"></div>
     </div>
@@ -104,12 +104,12 @@ button.danger { background: #fff; color: #e53e3e; border-color: #e53e3e; }
   <!-- 取り込む -->
   <div id="sec-import" class="section">
     <div class="card">
-      <div style="font-size:13px; font-weight:500; margin-bottom:8px;">GoogleマップのJSONを取り込む</div>
-      <div style="font-size:12px; color:#888; margin-bottom:12px;">Googleテイクアウトでダウンロードした「ラベル付きの場所.json」を選んでください</div>
+      <div style="font-size:13px; font-weight:500; margin-bottom:8px;">GoogleマップのCSV / JSONを取り込む</div>
+      <div style="font-size:12px; color:#888; margin-bottom:12px;">「行ってみたい.csv」「お気に入りの場所.csv」などを選んでください</div>
       <div class="file-drop" onclick="document.getElementById('file-input').click()">
-        📂 ファイルを選ぶ
+        📂 ファイルを選ぶ（CSV or JSON）
       </div>
-      <input type="file" id="file-input" accept=".json" style="display:none;" onchange="loadJSON(event)" />
+      <input type="file" id="file-input" accept=".json,.csv" style="display:none;" onchange="loadFile(event)" />
     </div>
     <div id="import-preview"></div>
   </div>
@@ -163,14 +163,7 @@ button.danger { background: #fff; color: #e53e3e; border-color: #e53e3e; }
 let selectedFav = 3;
 let transport = 'train';
 let stores = JSON.parse(localStorage.getItem('shops') || '[]');
-if(stores.length === 0) {
-  stores = [
-    { id:1, name:"猫のおちゃ屋", area:"上野", genre:"カフェ・パン", fav:3, memo:"サンプル", imported:false },
-    { id:2, name:"麺屋はなび", area:"上野", genre:"ランチ・ごはん", fav:2, memo:"", imported:false },
-  ];
-  saveStores();
-}
-let nextId = Math.max(...stores.map(s=>s.id), 0) + 1;
+let nextId = stores.length > 0 ? Math.max(...stores.map(s=>s.id)) + 1 : 1;
 let importBuffer = [];
 
 function saveStores() { localStorage.setItem('shops', JSON.stringify(stores)); }
@@ -229,12 +222,12 @@ function searchStores() {
   let html = `<div class="result-card"><div style="font-size:15px; font-weight:500; margin-bottom:12px;">📍 ${dest}付近に ${matched.length}件あります</div>`;
   matched.forEach(s => {
     const mins = effectiveTime(s);
-    const favLabel = {1:"★",2:"★★",3:"★★★"}[s.fav]||"★★★";
-    const favName = {1:"気になる",2:"行きたい",3:"絶対行く"}[s.fav]||"絶対行く";
+    const favLabel = {1:"★",2:"★★",3:"★★★"}[s.fav]||"★★";
+    const favName = {1:"気になる",2:"行きたい",3:"絶対行く"}[s.fav]||"行きたい";
     html += `<div class="store-item">
       <div>
         <div class="store-name">${s.name}<span class="badge-fav">${favLabel} ${favName}</span>${s.imported?'<span class="badge-import">Gマップ</span>':''}</div>
-        <div class="store-meta">${s.area||'エリア未設定'} · ${s.genre||'その他'}${s.memo?' · '+s.memo:''}</div>
+        <div class="store-meta">${s.area||'エリア未設定'} · ${s.genre||'その他'}</div>
         <div style="font-size:11px; color:#0F6E56; margin-top:2px;">${tLabel}${mins}分以内で通知</div>
       </div>
       <span class="badge-match">保存済み</span>
@@ -269,14 +262,20 @@ function deleteStore(id) {
 
 function renderList() {
   const container = document.getElementById('store-list-container');
-  if(stores.length === 0) { container.innerHTML = '<div class="empty">まだお店が登録されていません</div>'; return; }
+  const countEl = document.getElementById('list-count');
+  if(stores.length === 0) {
+    container.innerHTML = '<div class="empty">まだお店が登録されていません</div>';
+    countEl.textContent = '';
+    return;
+  }
+  countEl.textContent = `${stores.length}件登録済み`;
   const favLabel = {1:"★",2:"★★",3:"★★★"};
   let html = '';
   stores.forEach(s => {
     html += `<div class="store-item">
       <div style="flex:1;">
-        <div class="store-name">${s.name}<span class="badge-fav">${favLabel[s.fav]||'★★★'}</span>${s.imported?'<span class="badge-import">Gマップ</span>':''}</div>
-        <div class="store-meta">${s.area||'エリア未設定'} · ${s.genre||'その他'}${s.memo?' · '+s.memo:''}</div>
+        <div class="store-name">${s.name}<span class="badge-fav">${favLabel[s.fav]||'★★'}</span>${s.imported?'<span class="badge-import">Gマップ</span>':''}</div>
+        <div class="store-meta">${s.area||'エリア未設定'} · ${s.genre||'その他'}</div>
       </div>
       <button style="font-size:12px; padding:4px 8px; border:none; color:#999;" onclick="deleteStore(${s.id})">🗑</button>
     </div>`;
@@ -284,35 +283,56 @@ function renderList() {
   container.innerHTML = html;
 }
 
-// JSONインポート
-function loadJSON(event) {
+// ファイル読み込み（CSV/JSON両対応）
+function loadFile(event) {
   const file = event.target.files[0];
   if(!file) return;
   const reader = new FileReader();
   reader.onload = (e) => {
-    try {
-      const data = JSON.parse(e.target.result);
-      const features = data.features || [];
-      importBuffer = features.map((f, i) => ({
-        id: 'imp_' + i,
-        name: f.properties.name || '名称なし',
-        address: f.properties.address || '',
-        area: extractArea(f.properties.address || ''),
-        checked: true,
-      }));
-      renderImportPreview();
-    } catch(err) {
-      alert('ファイルの読み込みに失敗しました');
+    const content = e.target.result;
+    if(file.name.endsWith('.json')) {
+      parseJSON(content);
+    } else {
+      parseCSV(content);
     }
   };
-  reader.readAsText(file);
+  reader.readAsText(file, 'UTF-8');
+}
+
+function parseCSV(text) {
+  const lines = text.split('\n').filter(l => l.trim());
+  // 1行目はヘッダー、2行目は空行の場合あり
+  const items = [];
+  for(let i = 1; i < lines.length; i++) {
+    const cols = lines[i].split(',');
+    const name = cols[0] ? cols[0].replace(/^"|"$/g, '').trim() : '';
+    const url = cols[2] ? cols[2].replace(/^"|"$/g, '').trim() : '';
+    if(!name) continue;
+    items.push({ name, url, area: '', checked: true });
+  }
+  importBuffer = items;
+  renderImportPreview();
+}
+
+function parseJSON(text) {
+  try {
+    const data = JSON.parse(text);
+    const features = data.features || [];
+    importBuffer = features.map(f => ({
+      name: f.properties.name || '名称なし',
+      url: '',
+      area: extractArea(f.properties.address || ''),
+      checked: true,
+    }));
+    renderImportPreview();
+  } catch(e) {
+    alert('読み込みに失敗しました');
+  }
 }
 
 function extractArea(address) {
-  // 住所から区・市・町を抽出
   const match = address.match(/([^\s、，,]+[区市町村])/);
   if(match) return match[1];
-  // 外国の場合は都市名を抽出
   const parts = address.split(',');
   if(parts.length > 1) return parts[parts.length - 2].trim();
   return '';
@@ -323,21 +343,22 @@ function renderImportPreview() {
   if(importBuffer.length === 0) { container.innerHTML = ''; return; }
   let html = `<div class="card">
     <div style="font-size:13px; font-weight:500; margin-bottom:4px;">${importBuffer.length}件見つかりました</div>
-    <div style="font-size:12px; color:#888; margin-bottom:12px;">取り込みたいものにチェックを入れてください</div>`;
+    <div style="font-size:12px; color:#888; margin-bottom:12px;">取り込みたいものにチェックを入れてください。エリアは後で編集できます。</div>
+    <div style="display:flex; gap:8px; margin-bottom:12px;">
+      <button onclick="selectAllImport(true)" style="font-size:12px;">全選択</button>
+      <button onclick="selectAllImport(false)" style="font-size:12px;">全解除</button>
+      <button class="primary" style="flex:1;" onclick="doImport()">選択した店を取り込む</button>
+    </div>`;
   importBuffer.forEach((item, i) => {
     html += `<div class="import-item">
-      <input type="checkbox" class="import-check" id="chk_${i}" ${item.checked?'checked':''} onchange="importBuffer[${i}].checked=this.checked" />
+      <input type="checkbox" id="chk_${i}" ${item.checked?'checked':''} onchange="importBuffer[${i}].checked=this.checked" />
       <div style="flex:1;">
-        <div style="font-size:14px; font-weight:500;">${item.name}</div>
-        <div style="font-size:11px; color:#888;">${item.area||'エリア不明'} · ${item.address}</div>
+        <div style="font-size:13px; font-weight:500;">${item.name}</div>
+        ${item.area ? `<div style="font-size:11px; color:#888;">${item.area}</div>` : ''}
       </div>
     </div>`;
   });
-  html += `<div style="display:flex; gap:8px; margin-top:12px;">
-    <button onclick="selectAllImport(true)" style="font-size:12px;">全選択</button>
-    <button onclick="selectAllImport(false)" style="font-size:12px;">全解除</button>
-    <button class="primary" style="flex:1;" onclick="doImport()">選択した店を取り込む</button>
-  </div></div>`;
+  html += '</div>';
   container.innerHTML = html;
 }
 
@@ -358,14 +379,14 @@ function doImport() {
       area: item.area || 'エリア未設定',
       genre: 'その他',
       fav: 2,
-      memo: item.address,
+      memo: '',
       imported: true,
     });
   });
   saveStores();
   document.getElementById('import-preview').innerHTML = '';
   document.getElementById('file-input').value = '';
-  alert(`${selected.length}件取り込みました！\nリストで確認してジャンル・お気に入り度を編集してください。`);
+  alert(`${selected.length}件取り込みました！`);
   showTab('list');
 }
 
